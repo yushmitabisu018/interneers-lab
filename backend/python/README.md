@@ -30,8 +30,7 @@ Welcome to the **Interneers Lab 2026** Python backend! This serves as a minimal 
 9. [MongoDB Connection](#mongodb-connection)
 10. [Further Reading](#further-reading)
 11. [Important Note on settings.py](#important-note-on-settingspy)
-12. [Week 1 Implementation]
-(#week-1-implementation)
+12. [Week 1 Implementation](#week-1-implementation)
 ---
 
 ## Prerequisites & Tooling
@@ -459,7 +458,7 @@ docker compose logs -f                       # View logs
 
 ---
 
-##Week 1 Implementation
+## Week 1 Implementation
 
 ### Overview
 I created a new Django app named `week1` to implement a basic GET API using hexagonal architecture.
