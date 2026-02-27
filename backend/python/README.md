@@ -30,7 +30,8 @@ Welcome to the **Interneers Lab 2026** Python backend! This serves as a minimal 
 9. [MongoDB Connection](#mongodb-connection)
 10. [Further Reading](#further-reading)
 11. [Important Note on settings.py](#important-note-on-settingspy)
-
+12. [Week 1 Implementation]
+(#week-1-implementation)
 ---
 
 ## Prerequisites & Tooling
@@ -455,3 +456,88 @@ docker compose down                          # Stop MongoDB
 docker compose ps                            # List running containers
 docker compose logs -f                       # View logs
 ```
+
+---
+
+##Week 1 Implementation
+
+### Overview
+I created a new Django app named `week1` to implement a basic GET API using hexagonal architecture.
+
+---
+
+## API Documentation
+
+### 1. Root Endpoint
+
+**URL**
+```
+GET /
+```
+
+**Response**
+```json
+{
+  "message": "API is running"
+}
+```
+---
+
+### 2. Hello API
+
+Returns a personalized greeting using query parameters.
+
+**URL**
+
+```
+GET /hello/?name=YourName
+```
+
+**Query Parameter**
+
+| Key | Type   | Description              |
+|----------|---------|--------------------------|
+| name     | string | Name of the user         |
+
+**Example Request**
+```
+ http://127.0.0.1:8000/hello/?name=Yushmita
+```
+**Response**
+
+```json
+{
+  "message": "Hello Yushmita"
+}
+```
+
+If no name is provided:
+
+```
+GET /hello/
+```
+
+Response:
+
+```json
+{
+  "message": "Hello Unknown"
+}
+```
+
+---
+
+## How to Run
+
+1. Start server
+
+```
+python manage.py runserver 8000
+```
+
+2. Open browser or Postman
+
+```
+http://127.0.0.1:8001/hello/?name=Test
+```
+
