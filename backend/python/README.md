@@ -525,6 +525,17 @@ Response:
 ```
 
 ---
+## Project Structure (Week 1)
+
+```
+week1/
+│── views.py        # Request Handling
+│── service.py      # Business logic for greeting
+│── urls.py         # App-level routing
+│── __init__.py
+```
+
+---
 
 ## How to Run
 
