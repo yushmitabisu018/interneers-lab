@@ -12,6 +12,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
+from mongoengine import connect
+
+connect(
+    db="week3",
+    host="mongodb://root:example@localhost:27019/week3?authSource=admin"
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +47,7 @@ INSTALLED_APPS = [
     
     "week1",
     "week2",
+    "week3",
 ]
 
 MIDDLEWARE = [
@@ -124,3 +132,4 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
