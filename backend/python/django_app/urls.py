@@ -8,5 +8,6 @@ from django.http import HttpResponse
 urlpatterns = [
     path('admin/', admin.site.urls),
     # path('hello/', hello_world),
-    path('', include('week1.urls'))
+    path('', include('week1.urls')),
+    path('week2/', include('week2.urls')),
 ]
