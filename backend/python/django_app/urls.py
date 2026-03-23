@@ -11,4 +11,5 @@ urlpatterns = [
     path('', include('week1.urls')),
     path('week2/', include('week2.urls')),
     path('week3/', include('week3.urls')),
+    path('week4/', include('week4.urls')),
 ]
