@@ -135,3 +135,84 @@ if st.button("Stock Alerts"):
 
    else:
      st.success("All products have sufficient stock")
+
+
+#WEEK6 
+#week6 scenario selector
+from google import genai
+import json
+
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+st.subheader("AI scenario generator")
+scenario= st.selectbox(
+   "Choose scenario",
+   ["Normal", "Holiday Rush", "Clearance Sale"]
+)
+
+def get_prompt(scenario):
+    if scenario=="Holiday Rush":
+        return """
+        Generate exact 10 toy products with HIGH stock(quantity between 100 and 500).
+        Return ONLY a valid JSON array.
+        Each object must have:
+        name, brand, price, quantity
+        """
+
+    elif scenario== "Clearance Sale":
+        return """
+        Generate exact 10 toy products with LOW stock(quantity between 1 and 20).
+        Return ONLY a valid JSON array.
+        Each object must have:
+        name, brand, price, quantity
+        """
+
+    else:
+        return """
+        Generate exact 10 toy products with NORMAL stock(quantity between 20 and 100).
+        Return ONLY a valid JSON array.
+        Each object must have:
+        name, brand, price, quantity
+        """
+
+def gen_ai_products(prompt):
+   response= client.models.generate_content(
+      model= "gemini-2.5-flash-lite",
+      contents=prompt
+   )    
+   return response.candidates[0].content.parts[0].text
+
+def parse_products(text):
+    try:
+        start = text.find("[")
+        end = text.rfind("]") + 1
+        json_text = text[start:end]
+
+        return json.loads(json_text)
+
+    except Exception as e:
+        st.error(f"JSON parsing failed: {e}")
+        # st.write("Raw output:", text)
+        return []
+
+def save_products(products):
+   for p in products:
+      product= Product(
+         name=p["name"],
+         brand=p["brand"],
+         price=p["price"],
+         quantity=p["quantity"],
+         categories=[]
+      )   
+      product.save();
+
+if st.button("Generate Scenario Data"):
+    with st.spinner("Generating AI data..."):
+        prompt = get_prompt(scenario)
+        raw_text = gen_ai_products(prompt)
+        products = parse_products(raw_text)
+
+        if products:
+            save_products(products)
+            st.success(f"{len(products)} products added!")
+            st.write(products[:10])
