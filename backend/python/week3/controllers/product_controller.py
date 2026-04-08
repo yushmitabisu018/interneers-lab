@@ -3,42 +3,48 @@ from ..services.product_serivce import ProductService
 import json
 from django.views.decorators.csrf import csrf_exempt
 
-services = ProductService()
+def get_product_service():
+  return ProductService()
 
 @csrf_exempt
-def products_api(req):
-    if(req.method=="POST"):
+def products_api(req, service=None):
+    if service is None:
+        service= get_product_service()
+
+    if req.method=="POST":
         data = json.loads(req.body)
-        product = services.create_product(data)
+        product = service.create_product(data)
         return JsonResponse(product.to_dict(), status=201)  
     
-    if(req.method=="GET"):
-        products = services.get_all()
+    if req.method=="GET":
+        products = service.get_all()
         products_list = [p.to_dict() for p in products]
         return JsonResponse(products_list,safe=False)
      
 @csrf_exempt
-def products_detail_api(req, product_id):
-    # print("rec:", product_id)
-    if(req.method=="GET"):
-        product = services.get_product(product_id)
+def products_detail_api(req, product_id, service=None):
+    if service is None:
+        service= get_product_service()
+
+    if req.method=="GET":
+        product = service.get_product(product_id)
 
         if not product:
             return JsonResponse({"error": "Product not found"}, status=404)
         
         return JsonResponse(product.to_dict())
 
-    if(req.method=="PUT"):
+    if req.method=="PUT":
         data = json.loads(req.body)
-        product = services.update_product(product_id,data)
+        product = service.update_product(product_id,data)
     
         if not product:
             return JsonResponse({"error": "Product not found"}, status=404)
     
         return JsonResponse(product.to_dict())
     
-    if(req.method=="DELETE"):
-        value = services.delete_product(product_id)
+    if req.method=="DELETE":
+        value = service.delete_product(product_id)
 
         if not value:
             return JsonResponse({"error":"Product not found"}, status=404)

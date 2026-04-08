@@ -1,6 +1,7 @@
 from ..models import Product
 import datetime
 from bson import ObjectId
+from bson.errors import InvalidId
 
 class ProductRepository:
     def create(self,data):
@@ -12,25 +13,33 @@ class ProductRepository:
         return Product.objects()
     
     def get_product(self, product_id):
-        return Product.objects(id=ObjectId(product_id)).first()
-    
+        return Product.objects(id=product_id).first()  
+
+    allowed_updates= {"name","price","quantity","description"}
+
     def update_product(self, product_id,update_data):
-        product = Product.objects(id=ObjectId(product_id)).first()
+        try:
+           obj_id = ObjectId(product_id)
+        except (InvalidId, TypeError):
+          return None
+        
+        product = Product.objects(id=obj_id).first()
         if not product:
             return None
         
         for key,value in update_data.items():
+           if key in self.allowed_updates: 
             setattr(product,key,value)
 
-        product.updated_at = datetime.datetime.utcnow 
+        product.updated_at =datetime.datetime.now(datetime.timezone.utc)
         product.save()
         
         return product
         
     def delete_product(self, product_id):
-      product = Product.objects(id=ObjectId(product_id)).first()
-      if not product:
-       return False
+        product = Product.objects(id=product_id).first()
+        if not product:
+          return False
       
-      product.delete()
-      return True
+        product.delete()
+        return True

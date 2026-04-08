@@ -12,12 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
-from mongoengine import connect
-
-connect(
-    db="week3",
-    host="mongodb://root:example@localhost:27019/week3?authSource=admin"
-)
+# from django_app.db import init_db
+# init_db()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
