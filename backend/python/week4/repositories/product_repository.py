@@ -1,4 +1,8 @@
+import logging
 from ..models import Product, ProductCategory
+from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 class ProductRepository:
     @staticmethod
@@ -13,13 +17,16 @@ class ProductRepository:
     
     @staticmethod
     def update_product(product_id, data):
+        allowed_updates = {"name", "brand", "price", "quantity", "categories"}
         product = Product.objects(id=product_id).first()
         if not product:
             return None
 
         for key, value in data.items():
+           if key in allowed_updates: 
             setattr(product, key, value)
 
+        product.updated_at= datetime.now(timezone.utc)
         product.save()
         return product
     
@@ -56,10 +63,11 @@ class ProductRepository:
         categories = filters.get("categories")
         if categories and len(categories)>0:
             try:
-             category_objs = ProductCategory.objects(id__in = categories)
-             query["categories__in"] = list(category_objs)
-            except:
-             pass 
+                category_objs = ProductCategory.objects(id__in=categories)
+                query["categories__in"] = list(category_objs)
+            except Exception as e:
+                logger.exception("Invalid category filter passed to filter_products")
+                raise ValueError("Invalid category IDs provided") from e
 
         if filters.get("price_min") is not None:
             query["price__gte"] = filters["price_min"]
@@ -74,7 +82,10 @@ class ProductRepository:
 
 
         sort = filters.get("sort")
+        allowed_sorts = {"price", "-price", "name", "-name"}
         if sort:
+            if sort not in allowed_sorts:
+                raise ValueError("Invalid sort parameter")
             products = products.order_by(sort)
         
         page = int(filters.get("page",1))
