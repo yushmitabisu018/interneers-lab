@@ -1,4 +1,7 @@
+import logging
 from ..models import ProductCategory
+logger = logging.getLogger(__name__)
+
 
 def seed_categories():
     categories = ["Food", "Electronics", "Clothing"]
@@ -6,4 +9,4 @@ def seed_categories():
     for title in categories:
         if not ProductCategory.objects(title=title):
             ProductCategory(title=title).save()
-    print("Seeding done")
+    logger.info("Seeding done")

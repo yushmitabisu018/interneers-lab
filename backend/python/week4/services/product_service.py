@@ -9,6 +9,7 @@ class ProductService:
         name = data.get("name")
         brand = data.get("brand")
         price = data.get("price")
+        quantity= data.get("quantity",0)
 
         if not name:
             raise ValueError("Name is required")
@@ -16,17 +17,18 @@ class ProductService:
         if not brand:
             raise ValueError("Brand is required")
         
-        if price is not None and price<0:
+        if price is None:
+            raise ValueError("Price is required")
+        
+        if price<0:
             raise ValueError("Price must be positive")
         
-        product = Product(
-            name=name,
-            brand=brand,
-            price=price
-        )
-
-        product.save()
-        return product
+        return ProductRepository.create_product({
+            "name": name,
+            "brand": brand,
+            "price": price,
+            "quantity": quantity
+        })
     
     @staticmethod
     def get_products(filters):
@@ -65,26 +67,28 @@ class ProductService:
               name= row.get("name")
               brand= row.get("brand")
               price= row.get("price")
+              quantity= row.get("quantity")
 
-              if not name or not brand:
+              if not name or not brand or not price:
                  continue
 
-              price = float(price) if price else None
+              try:
+                price= float(price)
+                if price< 0:
+                    continue
 
-              if price is not None and price < 0:
+                products.append({
+                    "name": name,
+                    "brand": brand,
+                    "price": price,
+                    "quantity": quantity
+                })
+              except ValueError:
                 continue
 
-              product = Product(
-                 name=name,
-                 brand=brand,
-                 price=price
-                )
-
-              product.save()
-              products.append(product)
-
-            # except Exception:
-            #     continue
+        products = Product.objects.insert([
+            Product(**data) for data in products
+        ])
 
         return products
 

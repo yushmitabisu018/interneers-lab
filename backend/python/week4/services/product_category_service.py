@@ -33,22 +33,34 @@ class ProductCategoryService:
 
     @staticmethod
     def delete_category(cat_id):
-        value = ProductCategoryRepository.del_category(cat_id)
+        category = ProductCategoryRepository.get_category(cat_id)
 
-        if not value:
+        if not category:
             raise ValueError("Category not found")
         
+        #remove category from all products that reference it
+        products_with_category = ProductRepository.filter_products({
+            "categories": [str(category.id)]
+        })
+        
+        for product in products_with_category:
+            ProductRepository.remove_category(product, category)
+        
+        #delete category
+        ProductCategoryRepository.del_category(cat_id)
         return True
     
     @staticmethod
-    def get_products_by_category(cat_id):
+    def get_products_by_category(cat_id, page=1, limit=10):
         category = ProductCategoryRepository.get_category(cat_id)
 
         if not category:
             raise ValueError("Category not found")
 
         return ProductRepository.filter_products({
-            "categories": [str(category.id)]
+            "categories": [str(category.id)],
+            "page": page,
+            "limit": limit
         }) 
     
     @staticmethod
