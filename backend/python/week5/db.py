@@ -1,7 +1,14 @@
-from mongoengine import connect
+from mongoengine import connect, disconnect
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def init_db():
-    connect(
-        db= "week3",
-        host="mongodb://root:example@localhost:27019/week3?authSource=admin"
-    )
+    try:
+        disconnect()
+    except Exception:
+        pass
+
+    uri = os.getenv("MONGO_URI")
+    connect(host=uri)
