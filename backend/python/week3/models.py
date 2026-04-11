@@ -1,5 +1,5 @@
 from mongoengine import Document, StringField, FloatField, IntField, DateTimeField
-import datetime
+from datetime import datetime, timezone
 # Create your models here.
 
 class Product(Document):
@@ -10,11 +10,11 @@ class Product(Document):
     price = FloatField(required=True)
     quantity = IntField(required=True)
     
-    created_at = DateTimeField(datetime.datetime.now(datetime.timezone.utc))
-    updated_at = DateTimeField(datetime.datetime.now(datetime.timezone.utc))
+    created_at = DateTimeField(default=datetime.now(timezone.utc))
+    updated_at = DateTimeField(default=datetime.now(timezone.utc))
 
     def save(self, *args, **kwargs):
-        self.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
         if not self.created_at:
             self.created_at = self.updated_at
         return super().save(*args, **kwargs)
