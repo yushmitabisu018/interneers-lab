@@ -9,8 +9,8 @@ class Product(Document):
     quantity = IntField(default=0)
     categories = ListField(ReferenceField(ProductCategory))  #many to many
 
-    created_at = DateTimeField(datetime.now(timezone.utc))
-    updated_at = DateTimeField(datetime.now(timezone.utc))
+    created_at = DateTimeField(default=datetime.now(timezone.utc))
+    updated_at = DateTimeField(default=datetime.now(timezone.utc))
 
     meta = {
         'collection': 'products'
