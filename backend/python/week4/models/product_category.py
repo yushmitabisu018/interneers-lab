@@ -5,8 +5,8 @@ class ProductCategory(Document):
     title =StringField(required=True, unique=True)
     description= StringField()
 
-    created_at = DateTimeField(datetime.now(timezone.utc))
-    updated_at = DateTimeField(datetime.now(timezone.utc))
+    created_at = DateTimeField(default=datetime.now(timezone.utc))
+    updated_at = DateTimeField(default=datetime.now(timezone.utc))
 
     meta = {
         'collection': 'product_categories'
