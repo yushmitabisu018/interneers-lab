@@ -34,7 +34,6 @@ def get_categories():
 categories = get_categories()
 category_options = ["All"]+[c.title for c in categories]
 sel_category = st.sidebar.selectbox("Filter by category", category_options)
- 
 
 #filtering
 def get_cached_products(sel_category):
@@ -196,15 +195,16 @@ def parse_products(text):
         return []
 
 def save_products(products):
-   for p in products:
-      product= Product(
-         name=p["name"],
-         brand=p["brand"],
-         price=p["price"],
-         quantity=p["quantity"],
-         categories=[]
-      )   
-      product.save();
+    try:
+        ProductService.create_product({
+           "name": p["name"],
+            "brand": p["brand"],
+            "price": float(p["price"]),
+            "quantity": int(p["quantity"]),
+            "categories": [] 
+        })
+    except Exception as e:
+        st.error(f"Failed to save product: {str(e)}")
 
 if st.button("Generate Scenario Data"):
     with st.spinner("Generating AI data..."):
