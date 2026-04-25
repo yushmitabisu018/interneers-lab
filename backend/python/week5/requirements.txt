@@ -1,5 +1,0 @@
-streamlit
-mongoengine
-pandas
-matplotlib
-seaborn

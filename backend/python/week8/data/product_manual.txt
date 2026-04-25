@@ -1,0 +1,24 @@
+Product Manual - Smart Toy Car
+
+Overview:
+The Smart Toy Car is a rechargeable remote-controlled car designed for kids aged 5 and above. It features obstacle detection, LED lights, and long battery life.
+
+Features:
+- Rechargeable battery (lasts up to 4 hours)
+- Remote control range up to 10 meters
+- Durable plastic body
+- LED headlights
+
+Usage Instructions:
+1. Charge the toy car fully before first use.
+2. Turn on the power switch located at the bottom.
+3. Use the remote control to move the car forward, backward, left, and right.
+
+Safety Instructions:
+- Do not immerse in water.
+- Avoid using on uneven surfaces.
+- Keep away from fire.
+
+Troubleshooting:
+- If the car is not moving, check battery level.
+- Ensure the remote batteries are working.

@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 
 # to add backend/python to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -18,13 +19,25 @@ from week4.services.product_category_service import ProductCategoryService
 from week6.utils import clean_and_parse_json
 from week6.schemas import ProductSchema
 from week7.utils import cosine_similarity
+from week8.utils.document_loader import load_documents
+from week8.utils.chunking import split_documents
+from week8.utils.embeddings import get_embedding_model
+from week8.services.vector_store import create_vector_store 
+from week8.services.retrieval import retrieve_relevant_chunks
+from week8.services.rag import generate_rag_answer
+from week8.services.hybrid_rag import generate_hybrid_answer
 
 @st.cache_resource
 def init_cached_db():
  init_db()
 
 init_cached_db()
-st.cache_data.clear()
+
+@st.cache_data
+def load_products():
+    return ProductService.get_products({"page":1, "limit":1000})
+
+products = load_products()
 
 @st.cache_resource 
 def load_model(): 
@@ -39,6 +52,55 @@ def load_products():
 all_products = load_products()
 
 SEMANTIC_TOP_K = 5 
+WEEK8_DIR= os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "week8"))
+WEEK8_CHROMA_DIR= os.path.join(WEEK8_DIR, "chroma_db")
+
+RAG_EVAL_CASES = [
+    {"query": "What is the return policy?", "expected_source": "return_policy.txt"},
+    {"query": "How to use the toy car?", "expected_source": "product_manual.txt"},
+    {"query": "How are vendor payments processed?", "expected_source": "vendor_faq.txt"},
+]
+
+def knowledge_base_ready():
+    return os.path.isdir(WEEK8_CHROMA_DIR) and any(os.scandir(WEEK8_CHROMA_DIR))
+
+@st.cache_data(show_spinner=False)
+def build_knowledge_base(force_rebuild=False):
+    if force_rebuild and os.path.isdir(WEEK8_CHROMA_DIR):
+        shutil.rmtree(WEEK8_CHROMA_DIR)
+
+    documents =load_documents()
+    chunks =split_documents(documents)
+    embedding_model= get_embedding_model()
+    create_vector_store(chunks, embedding_model)
+
+    return len(documents), len(chunks)
+
+def run_rag_eval_suite():
+    rows= []
+    passed= 0
+
+    for test_case in RAG_EVAL_CASES:
+        query= test_case["query"]
+        expected_source= test_case["expected_source"]
+
+        results= retrieve_relevant_chunks(query, top_k=1)
+        predicted_source= results[0].metadata.get("source") if results else "none"
+        test_passed= predicted_source== expected_source
+
+        if test_passed:
+            passed+=1
+
+        rows.append(
+            {
+                "Query": query,
+                "Expected Source": expected_source,
+                "Predicted Source": predicted_source,
+                "Result": "PASS" if test_passed else "FAIL",
+            }
+        )
+    return passed, len(RAG_EVAL_CASES), pd.DataFrame(rows)
+
 
 st.set_page_config(page_title="Inventory Dashboard")
 st.title("Inventory Dashboard")
@@ -149,6 +211,66 @@ if search_query != st.session_state.last_query:
 
 if search_query and len(filtered_products) == 0:
     st.warning("No products found")
+
+
+st.subheader("Ask the Expert")
+
+rag_col1, rag_col2= st.columns([1, 1])
+with rag_col1:
+    if st.button("Build / Refresh Expert Knowledge Base"):
+        with st.spinner("Building vector store from week8 data..."):
+            doc_count, chunk_count = build_knowledge_base(force_rebuild=True)
+        st.success(
+            f"Expert knowledge base refreshed with {doc_count} documents and {chunk_count} chunks."
+        )
+
+with rag_col2:
+    if st.button("Run RAG Eval Suite"):
+        if not knowledge_base_ready():
+            with st.spinner("Preparing expert knowledge base first..."):
+                build_knowledge_base(force_rebuild=False)
+
+        score, total, eval_df = run_rag_eval_suite()
+        st.write(f"RAG Eval Score: {score}/{total}")
+        st.dataframe(eval_df, use_container_width=True)
+
+if "expert_chat_messages" not in st.session_state:
+    st.session_state.expert_chat_messages = [
+        {
+            "role": "assistant",
+            "content": (
+                "Ask me about returns, manuals, vendor policy or stocks available. "
+                "Example: What is the stock level for Toy Doctor Kit?"
+            ),
+        }
+    ]
+
+for msg in st.session_state.expert_chat_messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+user_question = st.chat_input("Ask the Expert...")
+
+if user_question:
+    st.session_state.expert_chat_messages.append({"role": "user", "content": user_question})
+
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    if not knowledge_base_ready():
+        with st.spinner("Preparing expert knowledge base..."):
+            build_knowledge_base(force_rebuild=False)
+
+    answer, trace_url = generate_hybrid_answer(user_question, products)
+
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+        if trace_url:
+           st.markdown(f"[View Trace in LangSmith]({trace_url})")
+
+    st.session_state.expert_chat_messages.append(
+        {"role": "assistant", "content": answer}
+    )
 
 
 #find similar function 
