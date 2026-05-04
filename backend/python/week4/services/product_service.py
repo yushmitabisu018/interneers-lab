@@ -10,6 +10,7 @@ class ProductService:
         brand = data.get("brand")
         price = data.get("price")
         quantity= data.get("quantity",0)
+        categories= data.get("categories",[])
 
         if not name:
             raise ValueError("Name is required")
@@ -27,7 +28,8 @@ class ProductService:
             "name": name,
             "brand": brand,
             "price": price,
-            "quantity": quantity
+            "quantity": quantity,
+            "categories": categories
         })
     
     @staticmethod
