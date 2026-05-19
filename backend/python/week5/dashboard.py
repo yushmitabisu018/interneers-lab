@@ -7,9 +7,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import streamlit as st
 import pandas as pd
 
+from google import genai
+import json
+
 from week5.db import init_db
 from week4.services.product_service import ProductService
 from week4.services.product_category_service import ProductCategoryService
+from week6.utils import clean_and_parse_json
+from week6.schemas import ProductSchema
 
 @st.cache_resource
 def init_cached_db():
@@ -34,7 +39,6 @@ def get_categories():
 categories = get_categories()
 category_options = ["All"]+[c.title for c in categories]
 sel_category = st.sidebar.selectbox("Filter by category", category_options)
- 
 
 #filtering
 def get_cached_products(sel_category):
@@ -135,3 +139,110 @@ if st.button("Stock Alerts"):
 
    else:
      st.success("All products have sufficient stock")
+
+
+#WEEK6 
+#week6 scenario selector
+@st.cache_resource
+def get_genai_client():
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        st.error("AI features will not work.")
+        return None
+    return genai.Client(api_key=api_key)
+
+st.subheader("AI scenario generator")
+scenario= st.selectbox(
+   "Choose scenario",
+   ["Normal", "Holiday Rush", "Clearance Sale"]
+)
+
+def get_prompt(scenario):
+    scenarios_config = {
+        "Holiday Rush": {"stock_level": "HIGH", "quantity_range": "100 and 500"},
+        "Clearance Sale": {"stock_level": "LOW", "quantity_range": "1 and 20"},
+        "Normal": {"stock_level": "NORMAL", "quantity_range": "20 and 100"}
+    }
+    
+    config = scenarios_config.get(scenario, scenarios_config["Normal"])
+    
+    return f"""
+    Generate exact 10 toy products with {config['stock_level']} stock(quantity between {config['quantity_range']}).
+    Return ONLY a valid JSON array.
+    Each object must have:
+    name, brand, price, quantity
+    """
+
+def gen_ai_products(prompt):
+   client = get_genai_client()
+   if client is None:
+       st.error("Cannot generate AI products: Google API key is not configured.")
+       return ""
+   
+   response= client.models.generate_content(
+      model= "gemini-2.5-flash-lite",
+      contents=prompt
+   )    
+   return response.candidates[0].content.parts[0].text
+
+def parse_products(text):
+    """
+    Parse JSON output from LLM using robust cleaning logic.
+    Handles markdown fences, single objects, and arrays.
+    """
+    products = clean_and_parse_json(text)
+    if not products:
+        st.error("Failed to parse JSON from AI response. Please try again.")
+    return products
+
+def save_products(products):
+    if not products:
+        return {"added": 0, "failed": 0}
+
+    added = 0
+    failed = 0
+    for i, p in enumerate(products):
+        try:
+            ProductService.create_product({
+                "name": p["name"],
+                "brand": p.get("brand", ""),
+                "price": float(p.get("price", 0)),
+                "quantity": int(p.get("quantity", 0)),
+                "categories": []
+            })
+            added += 1
+        except Exception as e:
+            failed += 1
+            st.error(f"Failed to save product at index {i}: {str(e)}")
+
+    return {"added": added, "failed": failed}
+
+if st.button("Generate Scenario Data"):
+    with st.spinner("Generating AI data..."):
+        prompt = get_prompt(scenario)
+        raw_text = gen_ai_products(prompt)
+        products = parse_products(raw_text)
+
+        if products:
+            valid_objs = []
+            invalid = []
+            for i, item in enumerate(products):
+                try:
+                    validated = ProductSchema(**item)
+                    valid_objs.append(validated)
+                except Exception as e:
+                    invalid.append({"index": i, "error": str(e), "item": item})
+
+            st.info(f"Validation: {len(valid_objs)} valid, {len(invalid)} invalid")
+
+            if valid_objs:
+                # Convert validated models to dicts for insertion
+                insert_items = [v.dict() for v in valid_objs]
+                result = save_products(insert_items)
+                st.success(f"Inserted: {result.get('added',0)}; Failed saves: {result.get('failed',0)}")
+
+            if invalid:
+                st.error(f"{len(invalid)} items failed validation. See details below.")
+                st.write(invalid[:10])
+            else:
+                st.write([p.dict() for p in valid_objs][:10])
