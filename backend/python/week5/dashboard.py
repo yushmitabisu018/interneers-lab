@@ -32,6 +32,8 @@ def load_model():
 
 model= load_model()
 
+SEMANTIC_TOP_K = 5 
+
 st.set_page_config(page_title="Inventory Dashboard")
 st.title("Inventory Dashboard")
 
@@ -76,12 +78,16 @@ if products is None:
 
 #embeddings
 @st.cache_data
-def get_product_embeddings(_products): 
+def get_product_embeddings(products): 
     texts = [
         f"{p.name} {p.brand} toy product for customers"
-        for p in _products
+        for p in products
     ]
-    return model.encode(texts), texts
+    embeddings = model.encode(texts)
+    embeddings = np.array(embeddings)
+    if embeddings.ndim == 1:
+        embeddings = embeddings[np.newaxis,:]
+    return embeddings, texts
 
 # implementation of keyword and semantic search
 st.subheader("Search Products")
@@ -117,11 +123,10 @@ if search_query and products:
 
         similarities.sort(key=lambda x: x[1], reverse=True)
 
-        results = similarities[:5] 
-        filtered_products = [p for p, _ in results]
+        filtered_products = [p for p, _ in similarities]
 
         st.write("### Top Matches")
-        for p, score in results:
+        for p, score in similarities[:SEMANTIC_TOP_K]:
             st.write(f"**{p.name}** → {score:.3f}")
 
 
@@ -290,7 +295,8 @@ threshold= st.sidebar.slider("Low stock threshold",1,100,10)
 if st.button("Stock Alerts"):
    st.subheader("Stock alerts")
    low_stock_items=[]
-   for p in filtered_products:
+   
+   for p in products:
      if p.quantity<threshold:
         low_stock_items.append(p)
 
