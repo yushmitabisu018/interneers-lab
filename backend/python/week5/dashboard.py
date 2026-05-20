@@ -32,6 +32,12 @@ def load_model():
 
 model= load_model()
 
+@st.cache_data
+def load_products():
+    return ProductService.get_products({"page": 1, "limit": 1000})
+
+all_products = load_products()
+
 SEMANTIC_TOP_K = 5 
 
 st.set_page_config(page_title="Inventory Dashboard")
@@ -77,12 +83,16 @@ if products is None:
 
 
 #embeddings
-@st.cache_data
-def get_product_embeddings(products): 
-    texts = [
+def get_product_embeddings(products):
+    texts = tuple(
         f"{p.name} {p.brand} toy product for customers"
         for p in products
-    ]
+    )
+    return _embed_product_texts(texts)
+
+
+@st.cache_data
+def _embed_product_texts(texts):
     embeddings = model.encode(texts)
     embeddings = np.array(embeddings)
     if embeddings.ndim == 1:
@@ -277,10 +287,15 @@ df = pd.DataFrame(data)
 # remove product
 st.subheader("Remove Product")
 if not df.empty:
-    id_selected = st.selectbox("Select product to delete", df["Id"], key="delete_select")
+    product_to_delete = st.selectbox(
+        "Select product to delete",
+        paginated_products,
+        key="delete_select",
+        format_func=lambda product: product.name,
+    )
 
     if st.button("Delete Product", key="delete_btn"):
-       ProductService.delete_product(id_selected)
+       ProductService.delete_product(product_to_delete.id)
        st.cache_data.clear()
        st.session_state["msg"] = "Product removed successfully"
        st.rerun()
@@ -293,19 +308,18 @@ else:
 threshold= st.sidebar.slider("Low stock threshold",1,100,10)
 
 if st.button("Stock Alerts"):
-   st.subheader("Stock alerts")
-   low_stock_items=[]
-   
-   for p in products:
-     if p.quantity<threshold:
-        low_stock_items.append(p)
+    st.subheader("Stock alerts")
+    low_stock_items = []
 
-   if low_stock_items:
-     for item in low_stock_items:
-       st.error(f"{item.name} is low on stock (Quantity: {item.quantity})")
+    for p in all_products:
+        if p.quantity < threshold:
+            low_stock_items.append(p)
 
-   else:
-     st.success("All products have sufficient stock")
+    if low_stock_items:
+        for item in low_stock_items:
+            st.error(f"{item.name} is low on stock (Quantity: {item.quantity})")
+    else:
+        st.success("All products have sufficient stock")
 
 
 #WEEK6 
