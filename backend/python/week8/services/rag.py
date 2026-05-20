@@ -1,8 +1,11 @@
 import os
+import logging
 from google import genai
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from week8.services.retrieval import retrieve_relevant_chunks
+
+logger = logging.getLogger(__name__)
 
 @traceable(name="RAG Pipeline")
 def generate_rag_answer(query):
@@ -29,13 +32,21 @@ Question:
 Answer:
 """
     
-    client= genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-    response= client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    try:
+        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        answer_text = (response.text or "").strip()
+        if not answer_text:
+            logger.warning("Gemini returned an empty response for RAG query")
+            answer_text = "I couldn't generate an answer right now. Please try again."
+    except Exception:
+        logger.exception("Gemini RAG generation failed")
+        answer_text = "I couldn't generate an answer right now. Please try again."
 
     run_tree= get_current_run_tree()
     trace_url= run_tree.get_url() if run_tree else None
 
-    return response.text, trace_url
+    return answer_text, trace_url

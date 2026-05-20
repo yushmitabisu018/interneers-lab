@@ -35,7 +35,7 @@ def retrieve_relevant_chunks(query, top_k=3):
 @traceable(name="LLM Call")
 def call_llm(prompt):
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", 
+        model="gemini-2.5-flash", 
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0
     )

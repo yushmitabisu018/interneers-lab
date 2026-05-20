@@ -24,7 +24,6 @@ from week8.utils.chunking import split_documents
 from week8.utils.embeddings import get_embedding_model
 from week8.services.vector_store import create_vector_store 
 from week8.services.retrieval import retrieve_relevant_chunks
-from week8.services.rag import generate_rag_answer
 from week8.services.hybrid_rag import generate_hybrid_answer
 
 @st.cache_resource
@@ -37,7 +36,7 @@ init_cached_db()
 def load_products():
     return ProductService.get_products({"page":1, "limit":1000})
 
-products = load_products()
+all_products = load_products()
 
 @st.cache_resource 
 def load_model(): 
@@ -128,9 +127,9 @@ if "last_category" not in st.session_state or st.session_state.last_category != 
 
 
 #filtering
-def get_cached_products(sel_category):
+def get_cached_products(sel_category, all_products):
   if sel_category=="All":
-    return list(ProductService.get_products({"limit":100}))
+      return list(all_products)
 
   else:
      cat = next((c for c in categories if c.title == sel_category), None)
@@ -138,7 +137,7 @@ def get_cached_products(sel_category):
       return None
      return list(ProductCategoryService.get_products_by_category(cat.id))
 
-products = get_cached_products(sel_category)  
+products = get_cached_products(sel_category, all_products)
 if products is None:
    st.warning("Selected category does not exist.")
    products=[]
@@ -225,14 +224,21 @@ with rag_col1:
         )
 
 with rag_col2:
-    if st.button("Run RAG Eval Suite"):
-        if not knowledge_base_ready():
-            with st.spinner("Preparing expert knowledge base first..."):
-                build_knowledge_base(force_rebuild=False)
+    rag_eval_running = st.session_state.get("rag_eval_running", False)
+    if st.button("Run RAG Eval Suite", disabled=rag_eval_running):
+        st.session_state.rag_eval_running = True
+        try:
+            if not knowledge_base_ready():
+                with st.spinner("Preparing expert knowledge base first..."):
+                    build_knowledge_base(force_rebuild=False)
 
-        score, total, eval_df = run_rag_eval_suite()
-        st.write(f"RAG Eval Score: {score}/{total}")
-        st.dataframe(eval_df, use_container_width=True)
+            with st.spinner("Running RAG eval suite..."):
+                score, total, eval_df = run_rag_eval_suite()
+
+            st.write(f"RAG Eval Score: {score}/{total}")
+            st.dataframe(eval_df, use_container_width=True)
+        finally:
+            st.session_state.rag_eval_running = False
 
 if "expert_chat_messages" not in st.session_state:
     st.session_state.expert_chat_messages = [
@@ -248,6 +254,10 @@ if "expert_chat_messages" not in st.session_state:
 for msg in st.session_state.expert_chat_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        if msg["role"] == "assistant" and msg["content"].startswith("Available stock for"):
+            st.caption("Stock answers come directly from the product catalog, so this response may not have a separate RAG trace.")
+        if msg.get("trace_url"):
+            st.markdown(f"[View Trace in LangSmith]({msg['trace_url']})")
 
 user_question = st.chat_input("Ask the Expert...")
 
@@ -261,15 +271,17 @@ if user_question:
         with st.spinner("Preparing expert knowledge base..."):
             build_knowledge_base(force_rebuild=False)
 
-    answer, trace_url = generate_hybrid_answer(user_question, products)
+    answer, trace_url = generate_hybrid_answer(user_question, all_products)
 
     with st.chat_message("assistant"):
         st.markdown(answer)
+        if answer.startswith("Available stock for"):
+            st.caption("Stock answers come directly from the product catalog, so this response may not have a separate RAG trace.")
         if trace_url:
            st.markdown(f"[View Trace in LangSmith]({trace_url})")
 
     st.session_state.expert_chat_messages.append(
-        {"role": "assistant", "content": answer}
+        {"role": "assistant", "content": answer, "trace_url": trace_url}
     )
 
 

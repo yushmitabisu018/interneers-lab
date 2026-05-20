@@ -1,16 +1,23 @@
 from week8.services.rag import generate_rag_answer
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
+import re
+
+
+def _normalize_text(value):
+    return " ".join(re.findall(r"[a-z0-9]+", value.lower()))
 
 @traceable(name="Hybrid RAG")
 def generate_hybrid_answer(query, products):
     query_lower = query.lower()
+    normalized_query = _normalize_text(query)
 
     #product matching
     product = None
-    for p in products:
-        if p.name.lower() in query_lower:
-            product= p
+    for p in sorted(products, key=lambda item: len(item.name), reverse=True):
+        normalized_name = _normalize_text(p.name)
+        if normalized_name and normalized_name in normalized_query:
+            product = p
             break
 
     keywords=["stock", "available", "availability", "inventory"]
