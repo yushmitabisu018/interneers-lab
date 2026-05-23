@@ -1,0 +1,16 @@
+Vendor FAQ
+
+Q1: How can I register as a vendor?
+A: Vendors can register through the vendor portal by submitting required documents.
+
+Q2: How are payments processed?
+A: Payments are processed weekly to the registered bank account.
+
+Q3: Can I update product details?
+A: Yes, vendors can update product information from their dashboard.
+
+Q4: What happens if a product is out of stock?
+A: Vendors should update stock status regularly to avoid order issues.
+
+Q5: How are returns handled?
+A: Returned items are sent back to vendors after inspection.
